@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="SkyPath">
@@ -18,7 +18,7 @@ video{object-fit:cover;background:#000}
 .bar{position:fixed;left:0;right:0;z-index:5;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .top{top:0;padding:calc(env(safe-area-inset-top,0px) + 8px) 10px 24px;background:linear-gradient(#000c,#0000)}
 .bot{bottom:0;padding:24px 10px calc(env(safe-area-inset-bottom,0px) + 10px);background:linear-gradient(#0000,#000d)}
-input[type=text]{flex:1;min-width:0;font:inherit;padding:10px 12px;border-radius:10px;border:1px solid #fff3;background:#000a;color:var(--fg)}
+input[type=text]{flex:1;min-width:0;font:16px -apple-system,system-ui,sans-serif;padding:10px 12px;border-radius:10px;border:1px solid #fff3;background:#000a;color:var(--fg)}
 button{font:inherit;padding:10px 13px;border-radius:10px;border:1px solid #fff3;background:#000a;color:var(--fg)}
 button.p{background:var(--ac);color:#15100a;border:0;font-weight:600}
 #info{flex:1 1 100%;font-size:13px;line-height:1.4}
@@ -39,7 +39,7 @@ button.p{background:var(--ac);color:#15100a;border:0;font-weight:600}
   <div id="info">Search for an object to begin.</div>
 </div>
 <div class="bar bot">
-  <button id="cal">Calibrate</button><button id="rst">Reset</button>
+  <button id="span"></button><button id="cal">Calibrate</button><button id="rst">Reset</button>
   <label class="fov">View <input id="fov" type="range" min="25" max="90" step="1"><span id="fv"></span></label>
 </div>
 <div id="start">
@@ -53,7 +53,7 @@ button.p{background:var(--ac);color:#15100a;border:0;font-weight:600}
 const $=s=>document.querySelector(s),cv=$('#c'),ctx=cv.getContext('2d'),vid=$('#v'),rad=Math.PI/180;
 const BODIES=['Sun','Moon','Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune','Pluto'];
 const ls={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}}};
-let obs=null,target=null,path=[],pathAt=0,W=0,H=0,azOff=+ls.get('azOff')||0,fov=+ls.get('fov')||55;
+let obs=null,target=null,path=[],pathAt=0,W=0,H=0,azOff=+ls.get('azOff')||0,fov=+ls.get('fov')||55,span=+ls.get('span')||12;
 const ori={a:0,b:90,g:0};
 $('#bl').innerHTML=BODIES.map(b=>`<option value="${b}">`).join('');
 $('#fov').value=fov;$('#fv').textContent=fov+'°';
@@ -103,8 +103,9 @@ function frame(){
   ctx.clearRect(0,0,W,H);
   if(target&&obs){
     const now=new Date(),R=rot();
+    const st=span<=6?10:span<=12?20:30;
     if(now-pathAt>20000){pathAt=+now;path=[];
-      for(let i=-6;i<=36;i++){const t=new Date(+now+i*600000),p=altaz(t);path.push({i,t,az:p.azimuth,alt:p.altitude})}}
+      for(let i=-60/st;i<=span*60/st;i++){const t=new Date(+now+i*st*60000),p=altaz(t);path.push({i,t,az:p.azimuth,alt:p.altitude})}}
     const pts=path.map(p=>({...p,s:proj(p.az,p.alt,R)}));
     ctx.lineWidth=2.5;ctx.strokeStyle='#ffb347';ctx.lineCap='round';
     for(let k=1;k<pts.length;k++){const a=pts[k-1],b=pts[k];
@@ -138,6 +139,8 @@ $('#cal').onclick=()=>{
   if(!target||!obs)return;const c=altaz(new Date()),aim=camAim(rot());
   azOff+=norm(c.azimuth-aim.az);azOff=norm(azOff);ls.set('azOff',azOff);
 };
+const spanBtn=()=>$('#span').textContent='Path '+span+'h';spanBtn();
+$('#span').onclick=()=>{span=span===6?12:span===12?24:6;ls.set('span',span);pathAt=0;spanBtn()};
 $('#rst').onclick=()=>{azOff=0;ls.set('azOff',0)};
 
 $('#begin').onclick=async()=>{
