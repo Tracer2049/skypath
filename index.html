@@ -53,7 +53,7 @@ button.p{background:var(--ac);color:#15100a;border:0;font-weight:600}
 const $=s=>document.querySelector(s),cv=$('#c'),ctx=cv.getContext('2d'),vid=$('#v'),rad=Math.PI/180;
 const BODIES=['Sun','Moon','Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune','Pluto'];
 const ls={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}}};
-let obs=null,target=null,path=[],pathAt=0,W=0,H=0,azOff=+ls.get('azOff')||0,fov=+ls.get('fov')||55,span=+ls.get('span')||12;
+let obs=null,target=null,path=[],pathAt=0,W=0,H=0,azOff=+ls.get('azOff')||0,fov=+ls.get('fov')||63,span=+ls.get('span')||12;
 const ori={a:0,b:90,g:0};
 $('#bl').innerHTML=BODIES.map(b=>`<option value="${b}">`).join('');
 $('#fov').value=fov;$('#fv').textContent=fov+'°';
@@ -85,15 +85,15 @@ function altaz(t){
   const d=Astronomy.Equator(target.body||'Star1',t,obs,true,true);
   return Astronomy.Horizon(t,obs,d.ra,d.dec,'normal');
 }
-function rot(){
-  const a=(ori.a-azOff)*rad,b=ori.b*rad,g=ori.g*rad,ca=Math.cos(a),sa=Math.sin(a),cb=Math.cos(b),sb=Math.sin(b),cg=Math.cos(g),sg=Math.sin(g);
+function rot(A=ori.a-azOff,B=ori.b,G=ori.g){
+  const a=A*rad,b=B*rad,g=G*rad,ca=Math.cos(a),sa=Math.sin(a),cb=Math.cos(b),sb=Math.sin(b),cg=Math.cos(g),sg=Math.sin(g);
   const r1=[cg,0,sg],r2=[sb*sg,cb,-sb*cg];
   return[[0,1,2].map(i=>ca*r1[i]-sa*r2[i]),[0,1,2].map(i=>sa*r1[i]+ca*r2[i]),[-cb*sg,sb,cb*cg]];
 }
 function proj(az,alt,R){
   const w=[Math.cos(alt*rad)*Math.sin(az*rad),Math.cos(alt*rad)*Math.cos(az*rad),Math.sin(alt*rad)];
   const d=[0,1,2].map(i=>R[0][i]*w[0]+R[1][i]*w[1]+R[2][i]*w[2]);
-  const f=(H/2)/Math.tan(fov*rad/2),front=d[2]<-0.02;
+  const f=(H/2)/Math.tan(fov*rad/2),front=d[2]<-0.2;
   return{d,front,x:front?W/2+f*d[0]/-d[2]:0,y:front?H/2-f*d[1]/-d[2]:0};
 }
 const norm=x=>((x+540)%360)-180;
@@ -103,7 +103,7 @@ function frame(){
   ctx.clearRect(0,0,W,H);
   if(target&&obs){
     const now=new Date(),R=rot();
-    const st=span<=6?10:span<=12?20:30;
+    const st=span<=6?5:span<=12?10:20,lab=span<=6?60:span<=12?120:180;
     if(now-pathAt>20000){pathAt=+now;path=[];
       for(let i=-60/st;i<=span*60/st;i++){const t=new Date(+now+i*st*60000),p=altaz(t);path.push({i,t,az:p.azimuth,alt:p.altitude})}}
     const pts=path.map(p=>({...p,s:proj(p.az,p.alt,R)}));
@@ -113,7 +113,7 @@ function frame(){
         ctx.globalAlpha=b.i<=0?.35:1;ctx.setLineDash(b.i<=0?[16,16]:[]);
         ctx.beginPath();ctx.moveTo(a.s.x,a.s.y);ctx.lineTo(b.s.x,b.s.y);ctx.stroke()}}
     ctx.setLineDash([]);ctx.globalAlpha=1;ctx.font='700 22px -apple-system,sans-serif';ctx.fillStyle='#ffb347';
-    for(const p of pts)if(p.i>0&&p.i%6===0&&p.s.front&&p.alt>0){
+    for(const p of pts)if(p.i>0&&p.i%(lab/st)===0&&p.s.front&&p.alt>0){
       const lb=p.t.toLocaleTimeString([],{hour:'numeric'});
       ctx.beginPath();ctx.arc(p.s.x,p.s.y,11,0,7);ctx.fill();
       ctx.lineWidth=6;ctx.strokeStyle='#000d';ctx.lineJoin='round';ctx.strokeText(lb,p.s.x+16,p.s.y-16);ctx.fillText(lb,p.s.x+16,p.s.y-16)}
@@ -149,8 +149,14 @@ $('#begin').onclick=async()=>{
   try{
     if(typeof DeviceOrientationEvent!=='undefined'&&DeviceOrientationEvent.requestPermission){
       if(await DeviceOrientationEvent.requestPermission()!=='granted')throw new Error('Motion access was denied. Enable it in Settings, then reopen the app.')}
+    let yaw=0,yawOk=false;
     addEventListener('deviceorientation',e=>{
-      ori.a=e.webkitCompassHeading!=null?360-e.webkitCompassHeading:(e.alpha||0);ori.b=e.beta||0;ori.g=e.gamma||0},true);
+      ori.b=e.beta||0;ori.g=e.gamma||0;const al=e.alpha||0;
+      if(e.webkitCompassHeading==null){ori.a=al;return}
+      const R0=rot(al,ori.b,ori.g),az=Math.atan2(-R0[0][2],-R0[1][2])/rad,d=norm(e.webkitCompassHeading-az);
+      const up=ori.b>70&&ori.b<110&&Math.abs(ori.g)<15;
+      if(!yawOk){yaw=d;yawOk=true}else if(up)yaw=norm(yaw+norm(d-yaw)*.08);
+      ori.a=al-yaw},true);
     vid.srcObject=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});
     await vid.play();
     try{const p=await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{timeout:15000}));
