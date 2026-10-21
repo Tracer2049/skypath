@@ -107,15 +107,16 @@ function frame(){
     if(now-pathAt>20000){pathAt=+now;path=[];
       for(let i=-60/st;i<=span*60/st;i++){const t=new Date(+now+i*st*60000),p=altaz(t);path.push({i,t,az:p.azimuth,alt:p.altitude})}}
     const pts=path.map(p=>({...p,s:proj(p.az,p.alt,R)}));
-    ctx.lineWidth=2.5;ctx.strokeStyle='#ffb347';ctx.lineCap='round';
+    ctx.lineWidth=5;ctx.strokeStyle='#ffb347';ctx.lineCap='round';
     for(let k=1;k<pts.length;k++){const a=pts[k-1],b=pts[k];
       if(a.s.front&&b.s.front&&a.alt>0&&b.alt>0&&Math.abs(b.s.x-a.s.x)<3000){
-        ctx.globalAlpha=b.i<=0?.35:1;ctx.setLineDash(b.i<=0?[4,6]:[]);
+        ctx.globalAlpha=b.i<=0?.35:1;ctx.setLineDash(b.i<=0?[9,11]:[]);
         ctx.beginPath();ctx.moveTo(a.s.x,a.s.y);ctx.lineTo(b.s.x,b.s.y);ctx.stroke()}}
-    ctx.setLineDash([]);ctx.globalAlpha=1;ctx.font='12px -apple-system,sans-serif';ctx.fillStyle='#ffb347';
+    ctx.setLineDash([]);ctx.globalAlpha=1;ctx.font='600 17px -apple-system,sans-serif';ctx.fillStyle='#ffb347';
     for(const p of pts)if(p.i>0&&p.i%6===0&&p.s.front&&p.alt>0){
-      ctx.beginPath();ctx.arc(p.s.x,p.s.y,4,0,7);ctx.fill();
-      ctx.fillText(p.t.toLocaleTimeString([],{hour:'numeric'}),p.s.x+8,p.s.y-8)}
+      const lb=p.t.toLocaleTimeString([],{hour:'numeric'});
+      ctx.beginPath();ctx.arc(p.s.x,p.s.y,7,0,7);ctx.fill();
+      ctx.lineWidth=4;ctx.strokeStyle='#000c';ctx.lineJoin='round';ctx.strokeText(lb,p.s.x+12,p.s.y-12);ctx.fillText(lb,p.s.x+12,p.s.y-12)}
     const c=altaz(now),s=proj(c.azimuth,c.altitude,R),aim=camAim(R);
     const onscreen=s.front&&s.x>20&&s.x<W-20&&s.y>90&&s.y<H-90;
     ctx.strokeStyle='#fff';ctx.fillStyle='#fff';ctx.lineWidth=2;
