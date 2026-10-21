@@ -28,6 +28,7 @@ button.p{background:var(--ac);color:#15100a;border:0;font-weight:600}
 #start{position:fixed;inset:0;z-index:9;background:var(--bg);display:flex;flex-direction:column;gap:16px;align-items:center;justify-content:center;text-align:center;padding:32px}
 #start h1{margin:0;font:600 34px/1.1 Georgia,'Times New Roman',serif}
 #start p{margin:0;max-width:30ch;color:var(--mut);line-height:1.5}
+#ver{font-size:12px;color:var(--mut);padding:0 4px}
 #err{color:#ff8a7a;min-height:1.2em;font-size:13px}
 </style></head><body>
 <video id="v" playsinline muted autoplay></video>
@@ -39,7 +40,7 @@ button.p{background:var(--ac);color:#15100a;border:0;font-weight:600}
   <div id="info">Search for an object to begin.</div>
 </div>
 <div class="bar bot">
-  <button id="span"></button><button id="cal">Calibrate</button><button id="rst">Reset</button>
+  <button id="span"></button><button id="cal">Calibrate</button><button id="rst">Reset</button><span id="ver">v006</span>
   <label class="fov">View <input id="fov" type="range" min="25" max="90" step="1"><span id="fv"></span></label>
 </div>
 <div id="start">
